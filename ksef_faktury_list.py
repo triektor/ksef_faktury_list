@@ -40,6 +40,9 @@ Usage:
     python ksef_faktury_list.py --nip 1234567890 --token "your-ksef-token"
     python ksef_faktury_list.py --nip 1234567890 --token-file token.txt
 
+Wyslanie XML do KSeF:
+    python ksef_faktury_list.py --nip 7962666817 --token-file token.txt --online-send sample_invoice.xml --env demo --verbose            WYSYLANIE xml do KSeF
+
 Options:
     --nip           NIP of the entity (required)
     --cert          Path to certificate file (PEM format) - for XAdES auth
@@ -56,6 +59,8 @@ Options:
     --download-xml  Download full XML for each invoice
     --download-pdf  Generate PDF for each invoice
     --verbose       Enable verbose logging
+
+    ---online-send    wysylanie XML do KSeF
 """
 
 import argparse

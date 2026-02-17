@@ -71,6 +71,7 @@ import sys
 import tempfile
 import time
 import uuid
+from ksef_online_session import OnlineSessionManager
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -141,6 +142,71 @@ KSEF_QR_URLS = {
 
 logger = logging.getLogger(__name__)
 
+class KSeFStatusChecker:
+    """Klasa do monitorowania statusu przetwarzania sesji w KSeF."""
+
+    # Mapa opisów dla kodów statusu KSeF
+    STATUS_MAP = {
+        100: "Sesja interaktywna otwarta",
+        170: "Sesja interaktywna zamknięta",
+        200: "Sesja interaktywna przetworzona pomyślnie",
+        415: "Błąd odszyfrowania dostarczonego klucza",
+        440: "Sesja anulowana - Nie przesłano faktur",
+        445: "Błąd weryfikacji, brak poprawnych faktur"
+    }
+
+    def __init__(self, ksef_client):
+        self.client = ksef_client
+
+    def get_status(self, session_reference: str) -> dict:
+        """Pobiera status sesji przez GET /sessions/{session_reference}"""
+        endpoint = f"/sessions/{session_reference}"
+        return self.client._make_request('GET', endpoint, with_session=True)
+
+    def wait_for_completion(self, session_reference: str, timeout: int = 180, interval: int = 5):
+            """
+            Monitoruje status sesji i kończy pracę, gdy faktury zostaną przetworzone.
+            """
+            start_time = time.time()
+            print(f"🔍 Monitorowanie sesji: {session_reference}")
+
+            while time.time() - start_time < timeout:
+                try:
+                    response = self.get_status(session_reference)
+                    
+                    status_obj = response.get('status', {})
+                    ksef_code = status_obj.get('code')
+                    description = status_obj.get('description') or self.STATUS_MAP.get(ksef_code, "Brak opisu")
+                    
+                    success_count = response.get('successfulInvoiceCount', 0)
+                    failed_count = response.get('failedInvoiceCount', 0)
+                    total_count = response.get('invoiceCount', 0)
+
+                    print(f"  [KSeF] Status: {ksef_code} - {description}")
+                    print(f"  [KSeF] Faktury: Wysłano: {total_count} | ✅ OK: {success_count} | ❌ Błędy: {failed_count}")
+
+                    # WARUNEK: Jeśli mamy wysłane faktury i wszystkie są OK (i nie ma błędów)
+                    if total_count > 0 and success_count == total_count and failed_count == 0:
+                        print(f"✅ Sukces: Wszystkie faktury ({success_count}) zostały pomyślnie przetworzone.")
+                        return response
+
+                    # WARUNEK: Jeśli sesja osiągnęła finalny kod 200
+                    if ksef_code == 200:
+                        print(f"✅ Sesja zakończona kodem 200.")
+                        return response
+
+                    # WARUNEK BŁĘDU: Jeśli pojawiła się jakakolwiek błędna faktura lub kod błędu
+                    if failed_count > 0 or (ksef_code and ksef_code >= 400):
+                        print(f"❌ Przetwarzanie przerwane z powodu błędów.")
+                        return response
+
+                except Exception as e:
+                    logger.error(f"Błąd odpytywania: {e}")
+                
+                time.sleep(interval)
+            
+            print(f"⚠️ Limit czasu przekroczony.")
+            return None
 
 class KSeFError(Exception):
     """Exception for KSeF API errors."""
@@ -1816,6 +1882,16 @@ Examples:
     parser.add_argument('--verbose', '-v', action='store_true',
                         help='Enable verbose logging')
 
+# Interactive session submission
+    online_group = parser.add_argument_group('Interactive session (online submission)')
+    online_group.add_argument('--online-send', metavar='PATH',
+                         help='Submit invoice XML via interactive session')
+    online_group.add_argument('--schema-version', choices=['1-0D', '1-0E'], 
+                         default='1-0E',
+                         help='Invoice schema version (default: 1-0E)')
+    online_group.add_argument('--form-code', default='FA',
+                         help='Form code value (default: FA)')
+
     # Email options
     email_group = parser.add_argument_group('Email sending')
     email_group.add_argument('--send-email', action='store_true',
@@ -2240,6 +2316,61 @@ Examples:
                         logger.debug(f"  Usunięto plik tymczasowy: {tmp_path}")
                     except OSError as e:
                         logger.warning(f"  Nie udało się usunąć pliku tymczasowego {tmp_path}: {e}")
+
+        # Interactive session submission
+        if args.online_send:
+            if not os.path.exists(args.online_send):
+                print(f"Błąd: Plik faktury nie znaleziony: {args.online_send}", file=sys.stderr)
+                sys.exit(1)
+            
+            with open(args.online_send, 'rb') as f:
+                invoice_xml = f.read()
+            
+            try:
+                session_mgr = OnlineSessionManager(client)
+                
+                print(f"\nOtwarcie sesji interaktywnej...")
+                session = session_mgr.open_session(
+                    schema_version=args.schema_version,  # Teraz będzie '1-0E' zamiast 'FA(3)'
+                    form_code_value=args.form_code
+                )
+                print(f"✓ Sesja otwarta (reference: {session['referenceNumber']})")
+                print(f"  Ważna do: {session.get('validUntil', 'N/A')}")
+                
+                print(f"\nWysyłanie szyfrowanej faktury...")
+                response = session_mgr.send_invoice(invoice_xml)
+                doc_ref = response.get('referenceNumber')
+                processing_code = response.get('processingCode')
+                print(f"✓ Faktura wysłana (reference: {doc_ref})")
+                print(f"  Kod przetwarzania: {processing_code}")
+
+                # Inicjalizacja sprawdzacza
+                status_checker = KSeFStatusChecker(client)
+
+                # Czekamy na status 200 dla CAŁEJ SESJI
+                # session_mgr.session_reference to numer typu: 20260216-SO-XXXXXXXXXX-A2
+                print(f"\nOczekiwanie na weryfikację sesji w KSeF przed zamknięciem...")
+                status_checker.wait_for_completion(session_mgr.session_reference)
+                
+                # Teraz, gdy wiemy że przetwarzanie się zakończyło (kod 200),
+                # próba zamknięcia sesji powinna przejść bez błędu 400 (kod 21180)
+                print(f"\nZamykanie sesji...")
+                try:
+                    session_mgr.close_session()
+                    print(f"✓ Sesja zamknięta")
+                except Exception as e:
+                    print(f"⚠️ Nie udało się zamknąć sesji: {e}")
+                    print(f"  Sesja będzie zamknięta automatycznie przez KSeF")
+
+                print(f"\nPodsumowanie:")
+                print(f"  Numer dokumentu: {doc_ref}")
+                print(f"  Kod przetwarzania: {processing_code} (100=w trakcie, 200=gotowe)")
+                print(f"\n→ Dokument zostanie przetworzony asynchronicznie")
+                
+            except Exception as e:
+                print(f"\nBłąd wysyłania faktury: {e}", file=sys.stderr)
+                logger.exception("Wysyłka interaktywna nie powiodła się")
+                sys.exit(1)
 
         # Terminate session
         print("\nKończenie sesji...")

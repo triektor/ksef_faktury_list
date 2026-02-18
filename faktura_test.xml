@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Faktura xmlns="http://crd.gov.pl/wzor/2025/06/25/13775/">
+  <Naglowek>
+    <KodFormularza kodSystemowy="FA (3)" wersjaSchemy="1-0E">FA</KodFormularza>
+    <WariantFormularza>3</WariantFormularza>
+    <DataWytworzeniaFa>2026-02-18T12:42:15Z</DataWytworzeniaFa>
+    <SystemInfo>własne wdrożenie</SystemInfo>
+  </Naglowek>
+  <Podmiot1>
+    <PrefiksPodatnika>PL</PrefiksPodatnika>
+    <DaneIdentyfikacyjne>
+      <NIP>7962666817</NIP>
+      <Nazwa>TRAKTONET Maciej Frączek</Nazwa>
+    </DaneIdentyfikacyjne>
+    <Adres>
+      <KodKraju>PL</KodKraju>
+      <AdresL1>01-234 Warszawa</AdresL1>
+      <AdresL2>99</AdresL2>
+    </Adres>
+  </Podmiot1>
+  <Podmiot2>
+    <DaneIdentyfikacyjne>
+      <NIP>5251007278</NIP>
+      <Nazwa>Pierwszy Urząd Skarbowy w Radomiu</Nazwa>
+    </DaneIdentyfikacyjne>
+    <Adres>
+      <KodKraju>PL</KodKraju>
+      <AdresL1>26-615 Radom</AdresL1>
+      <AdresL2>ul. Zbrowskiego 106</AdresL2>
+    </Adres>
+    <DaneKontaktowe>
+      <Email>1us.radom@mf.gov.pl</Email>
+      <Telefon>223300330</Telefon>
+    </DaneKontaktowe>
+    <JST>2</JST>
+    <GV>2</GV>
+  </Podmiot2>
+  <Fa>
+    <KodWaluty>PLN</KodWaluty>
+    <P_1>2026-02-18</P_1>
+    <P_2>T/2026/02/0003</P_2>
+    <P_6>2026-02-01</P_6>
+    <P_13_1>1200.00</P_13_1>
+    <P_14_1>276.00</P_14_1>
+    <P_15>1476.00</P_15>
+    <Adnotacje>
+      <P_16>2</P_16>
+      <P_17>2</P_17>
+      <P_18>2</P_18>
+      <P_18A>2</P_18A>
+      <Zwolnienie>
+        <P_19N>1</P_19N>
+      </Zwolnienie>
+      <NoweSrodkiTransportu>
+        <P_22N>1</P_22N>
+      </NoweSrodkiTransportu>
+      <P_23>2</P_23>
+      <PMarzy>
+        <P_PMarzyN>1</P_PMarzyN>
+      </PMarzy>
+    </Adnotacje>
+    <RodzajFaktury>VAT</RodzajFaktury>
+    <TP>1</TP>
+    <DodatkowyOpis>
+      <Klucz>Okres</Klucz>
+      <Wartosc>opłata dotyczy luty 2026</Wartosc>
+    </DodatkowyOpis>
+    <FaWiersz>
+      <NrWierszaFa>1</NrWierszaFa>
+      <P_7>Usługi telekomunikacyjne.</P_7>
+      <P_8A>usł</P_8A>
+      <P_8B>1.00</P_8B>
+      <P_9A>1000.00</P_9A>
+      <P_11>1000.00</P_11>
+      <P_11Vat>230.00</P_11Vat>
+      <P_12>23</P_12>
+    </FaWiersz>
+    <FaWiersz>
+      <NrWierszaFa>2</NrWierszaFa>
+      <P_7>Opłata instalacyjna</P_7>
+      <P_8A>usł</P_8A>
+      <P_8B>1.00</P_8B>
+      <P_9A>200.00</P_9A>
+      <P_11>200.00</P_11>
+      <P_11Vat>46.00</P_11Vat>
+      <P_12>23</P_12>
+    </FaWiersz>
+    <Platnosc>
+      <TerminPlatnosci>
+        <Termin>2026-03-04</Termin>
+      </TerminPlatnosci>
+      <FormaPlatnosci>6</FormaPlatnosci>
+      <RachunekBankowy>
+        <NrRB>32 1010 0055 0200 2020 0007 0000</NrRB>
+        <NazwaBanku>mBank</NazwaBanku>
+      </RachunekBankowy>
+    </Platnosc>
+  </Fa>
+  <Stopka>
+    <Rejestry>
+      <PelnaNazwa>TRAKTONET Maciej Frączek</PelnaNazwa>
+    </Rejestry>
+  </Stopka>
+</Faktura>
